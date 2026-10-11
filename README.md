@@ -78,6 +78,18 @@ A date-only `--until` stops at midnight, not at the end of that day.
 Without `--summary`, matching records retain their original text and input order,
 with one record per output line.
 
+Filter by message:
+
+```sh
+logslice app.log --grep Disk
+```
+
+```text
+2026-10-10 12:01:00 ERROR Disk full
+```
+
+The pattern is a Python regular expression searched in the message only, not in the timestamp or level.
+
 Read stdin with no file arguments or with `-`. On macOS/Linux:
 
 ```sh
@@ -134,6 +146,8 @@ have been written when a later file fails.
 | `--since DATETIME` | Inclusive lower bound: `YYYY-MM-DD` (midnight) or `YYYY-MM-DD[ T]HH:MM:SS[.fraction]`, no timezone. |
 | `--until DATETIME` | Inclusive upper bound, same formats as `--since`. |
 | `--level LEVEL` | Minimum level: `DEBUG`, `INFO`, `WARNING` (or `WARN`), `ERROR`, `CRITICAL`; case-insensitive (default `DEBUG`). |
+| `--grep PATTERN` | Keep only records whose message matches the Python regular expression `PATTERN` (searched in the message only). |
+| `-i`, `--ignore-case` | Make `--grep` case-insensitive. |
 | `--summary` | Print level counts, the top 5 ERROR/CRITICAL messages and the skipped line count instead of records. |
 | `-h`, `--help` | Show help. |
 

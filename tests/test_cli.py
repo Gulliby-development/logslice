@@ -48,6 +48,7 @@ def test_help_documents_inputs_options_and_accepted_forms():
         "--since", "--until", "--level", "--summary", "stdin", "'-'",
         "YYYY-MM-DD", "HH:MM:SS", "fraction", "DEBUG", "INFO", "WARNING",
         "WARN", "ERROR", "CRITICAL", "case-insensitive",
+        "--grep", "--ignore-case",
     ):
         assert text in result.stdout
 
@@ -259,3 +260,60 @@ def test_stdin_and_stdout_use_utf8_despite_platform_default():
     assert result.returncode == 0
     assert result.stderr == ""
     assert result.stdout == "2026-10-10 12:00:00 INFO café\n"
+
+
+README_LOG = (
+    "2026-10-10 12:00:00 INFO Started\n"
+    "2026-10-10T12:00:00.123 warn Slow response\n"
+    "2026-10-10 12:01:00 ERROR Disk full\n"
+)
+DISK_LINE = "2026-10-10 12:01:00 ERROR Disk full\n"
+
+
+def test_grep_matches_message():
+    result = run_cli("--grep", "Disk", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout == DISK_LINE
+
+
+def test_grep_is_case_sensitive_by_default():
+    result = run_cli("--grep", "disk", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stdout == ""
+
+
+def test_grep_ignore_case():
+    result = run_cli("--grep", "disk", "-i", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stdout == DISK_LINE
+
+
+def test_grep_anchored_with_level():
+    result = run_cli("--grep", "^Slow", "--level", "warning", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stdout == "2026-10-10T12:00:00.123 warn Slow response\n"
+
+
+def test_grep_with_summary():
+    result = run_cli("--grep", "Disk", "--summary", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout == (
+        "Level counts:\nDEBUG: 0\nINFO: 0\nWARNING: 0\nERROR: 1\nCRITICAL: 0\n"
+        "Top 5 error messages:\n  1  Disk full\nSkipped lines: 0\n"
+    )
+
+
+def test_grep_invalid_pattern_exits_two():
+    result = run_cli("--grep", "[", input_text=README_LOG)
+    assert result.returncode == 2
+    assert result.stderr.startswith("logslice: invalid --grep pattern '['")
+    assert result.stdout == ""
+
+
+def test_ignore_case_alone_does_not_change_output():
+    plain = run_cli(input_text=README_LOG)
+    with_flag = run_cli("-i", input_text=README_LOG)
+    assert with_flag.returncode == plain.returncode == 0
+    assert with_flag.stdout == plain.stdout == README_LOG

@@ -1,6 +1,7 @@
 """Tests for datetime arguments, severity arguments, and record filtering."""
 
 import argparse
+import re
 from datetime import datetime
 
 import pytest
@@ -176,4 +177,70 @@ def test_time_and_level_filters_must_all_match(timestamp, severity, expected):
         since=datetime(2026, 10, 10, 12),
         until=datetime(2026, 10, 10, 13),
         level=Level.WARNING,
+    ) is expected
+
+
+def _record(message, severity=Level.INFO, timestamp=datetime(2026, 10, 10, 12)):
+    return Record(timestamp, severity, message, "raw")
+
+
+def test_pattern_matches_message():
+    assert matches(_record("Disk full"), pattern=re.compile("Disk")) is True
+
+
+def test_pattern_without_match_rejects_record():
+    assert matches(_record("Disk full"), pattern=re.compile("disk")) is False
+
+
+def test_none_pattern_keeps_existing_behavior():
+    assert matches(_record("Disk full"), pattern=None) is True
+
+
+def test_empty_message_matches_only_patterns_matching_empty_string():
+    record = _record("")
+
+    assert matches(record, pattern=re.compile("Disk")) is False
+    assert matches(record, pattern=re.compile("^$")) is True
+    assert matches(record, pattern=re.compile("")) is True
+
+
+def test_anchored_pattern_uses_search_on_message_start():
+    pattern = re.compile("^timeout")
+
+    assert matches(_record("timeout while reading"), pattern=pattern) is True
+    assert matches(_record("read timeout"), pattern=pattern) is False
+
+
+def test_case_insensitive_compiled_pattern():
+    pattern = re.compile("disk", re.IGNORECASE)
+
+    assert matches(_record("Disk full"), pattern=pattern) is True
+
+
+def test_pattern_does_not_search_level_or_timestamp():
+    record = _record("Started", Level.ERROR)
+
+    assert matches(record, pattern=re.compile("ERROR")) is False
+    assert matches(record, pattern=re.compile("2026")) is False
+
+
+@pytest.mark.parametrize(
+    ("timestamp", "severity", "message", "expected"),
+    [
+        (datetime(2026, 10, 10, 12, 30), Level.ERROR, "timeout", True),
+        (datetime(2026, 10, 10, 12, 30), Level.ERROR, "Disk full", False),
+        (datetime(2026, 10, 10, 12, 30), Level.INFO, "timeout", False),
+        (datetime(2026, 10, 10, 11), Level.ERROR, "timeout", False),
+        (datetime(2026, 10, 10, 14), Level.ERROR, "timeout", False),
+    ],
+)
+def test_pattern_combines_with_level_and_time_bounds(timestamp, severity, message, expected):
+    record = _record(message, severity, timestamp)
+
+    assert matches(
+        record,
+        since=datetime(2026, 10, 10, 12),
+        until=datetime(2026, 10, 10, 13),
+        level=Level.WARNING,
+        pattern=re.compile("timeout"),
     ) is expected

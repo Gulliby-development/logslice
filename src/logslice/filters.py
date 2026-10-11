@@ -46,8 +46,12 @@ def matches(
     since: datetime | None = None,
     until: datetime | None = None,
     level: Level = Level.DEBUG,
+    pattern: re.Pattern[str] | None = None,
 ) -> bool:
     """Return whether a record meets both inclusive bounds and minimum severity.
+
+    If pattern is given, it must also be found (re.search) in record.message
+    only; the timestamp and level are not searched. None means no message filter.
 
     Omitted bounds are unrestricted. A reversed range matches no records.
     Timestamps and bounds are timezone-naive, as produced by the parsers.
@@ -56,4 +60,5 @@ def matches(
         (since is None or record.timestamp >= since)
         and (until is None or record.timestamp <= until)
         and record.level >= level
+        and (pattern is None or pattern.search(record.message) is not None)
     )
