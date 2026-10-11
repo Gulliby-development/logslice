@@ -1,6 +1,7 @@
 """Command-line filtering and summaries with streaming UTF-8 input."""
 
 import argparse
+import re
 import sys
 from contextlib import nullcontext
 from typing import TextIO
@@ -38,6 +39,15 @@ def build_parser() -> argparse.ArgumentParser:
         "case-insensitive (default: DEBUG)",
     )
     parser.add_argument(
+        "--grep", metavar="PATTERN",
+        help="regular expression searched in the message only "
+        "(not the timestamp or level)",
+    )
+    parser.add_argument(
+        "-i", "--ignore-case", action="store_true",
+        help="make --grep case-insensitive",
+    )
+    parser.add_argument(
         "--summary", action="store_true",
         help="print level counts, top 5 ERROR/CRITICAL messages, and skipped lines",
     )
@@ -56,6 +66,16 @@ def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdin, sys.stdout, sys.stderr):
         _configure_utf8(stream)
     args = build_parser().parse_args(argv)
+    pattern = None
+    if args.grep is not None:
+        try:
+            pattern = re.compile(args.grep, re.IGNORECASE if args.ignore_case else 0)
+        except re.error as error:
+            print(
+                f"logslice: invalid --grep pattern {args.grep!r}: {error}",
+                file=sys.stderr,
+            )
+            return 2
     summary = Summary()
     for path in args.files or ["-"]:
         try:
@@ -70,7 +90,11 @@ def main(argv: list[str] | None = None) -> int:
                         summary.skipped_lines += 1
                         continue
                     if not matches(
-                        record, since=args.since, until=args.until, level=args.level
+                        record,
+                        since=args.since,
+                        until=args.until,
+                        level=args.level,
+                        pattern=pattern,
                     ):
                         continue
                     if args.summary:
