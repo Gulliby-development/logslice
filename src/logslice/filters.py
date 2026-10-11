@@ -1,0 +1,59 @@
+"""Parse CLI filter arguments and match records against inclusive bounds."""
+
+import argparse
+import re
+from datetime import datetime
+
+from .parser import Level, Record
+
+_DATETIME_RE = re.compile(
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}"
+    r"(?:[ T][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?)?"
+)
+
+
+def parse_datetime(value: str) -> datetime:
+    """Parse a naive datetime; date-only values mean midnight.
+
+    Raise ArgumentTypeError for invalid values so argparse reports exit code 2.
+    Timezone suffixes and datetime forms outside the documented syntax are rejected.
+    """
+    if _DATETIME_RE.fullmatch(value) is not None:
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            pass
+    raise argparse.ArgumentTypeError(
+        f"invalid datetime {value!r}: expected YYYY-MM-DD or "
+        "YYYY-MM-DD[ T]HH:MM:SS[.fraction] without a timezone"
+    )
+
+
+def parse_level(value: str) -> Level:
+    """Parse a case-insensitive severity, accepting WARN as WARNING."""
+    try:
+        return Level[value.upper()]
+    except KeyError:
+        raise argparse.ArgumentTypeError(
+            f"invalid level {value!r}: expected DEBUG, INFO, WARNING (or WARN), "
+            "ERROR, or CRITICAL"
+        ) from None
+
+
+def matches(
+    record: Record,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    level: Level = Level.DEBUG,
+) -> bool:
+    """Return whether a record meets both inclusive bounds and minimum severity.
+
+    Omitted bounds are unrestricted. A reversed range matches no records.
+    Timestamps and bounds are timezone-naive, as produced by the parsers.
+    """
+    return (
+        (since is None or record.timestamp >= since)
+        and (until is None or record.timestamp <= until)
+        and record.level >= level
+    )
