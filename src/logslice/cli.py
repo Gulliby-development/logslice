@@ -51,6 +51,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--summary", action="store_true",
         help="print level counts, top 5 ERROR/CRITICAL messages, and skipped lines",
     )
+    parser.add_argument(
+        "--summary-format", choices=["text", "json"], default="text",
+        help="output format of --summary: text or json (default: text)",
+    )
     return parser
 
 
@@ -66,6 +70,9 @@ def main(argv: list[str] | None = None) -> int:
     for stream in (sys.stdin, sys.stdout, sys.stderr):
         _configure_utf8(stream)
     args = build_parser().parse_args(argv)
+    if args.summary_format == "json" and not args.summary:
+        print("logslice: --summary-format requires --summary", file=sys.stderr)
+        return 2
     pattern = None
     if args.grep is not None:
         try:
@@ -105,5 +112,5 @@ def main(argv: list[str] | None = None) -> int:
             print(f"logslice: cannot read {path!r}: {error}", file=sys.stderr)
             return 2
     if args.summary:
-        print(summary.render())
+        print(summary.render_json() if args.summary_format == "json" else summary.render())
     return 0

@@ -129,6 +129,35 @@ combines ERROR and CRITICAL messages, sorts by descending frequency, and breaks
 ties by first occurrence. Entries are indented by two spaces; it shows `  (none)` if there are no error messages.
 The skipped count covers all unparseable input lines, not filtered-out records.
 
+JSON summary: add `--summary-format json` to print the summary as a JSON object.
+
+```sh
+logslice app.log --summary --summary-format json
+```
+
+For the three example log lines above, this prints:
+
+```json
+{
+  "levels": {
+    "DEBUG": 0,
+    "INFO": 1,
+    "WARNING": 1,
+    "ERROR": 1,
+    "CRITICAL": 0
+  },
+  "top_errors": [
+    {
+      "count": 1,
+      "message": "Disk full"
+    }
+  ],
+  "skipped_lines": 0
+}
+```
+
+The object has the keys `levels`, `top_errors` and `skipped_lines`.
+
 Input is processed line by line as UTF-8, replacing invalid bytes. LF and CRLF
 line endings are supported; output uses UTF-8. Summary mode keeps per-level and
 per-distinct-error-message counters rather than loading all records into memory.
@@ -149,6 +178,7 @@ have been written when a later file fails.
 | `--grep PATTERN` | Keep only records whose message matches the Python regular expression `PATTERN` (searched in the message only). |
 | `-i`, `--ignore-case` | Make `--grep` case-insensitive. |
 | `--summary` | Print level counts, the top 5 ERROR/CRITICAL messages and the skipped line count instead of records. |
+| `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, the top 5 error messages and the skipped line count as a JSON object. |
 | `-h`, `--help` | Show help. |
 
 ## Development

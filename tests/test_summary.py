@@ -1,5 +1,6 @@
 """Tests for the streaming summary accumulator and its rendered output."""
 
+import json
 from datetime import datetime
 
 import pytest
@@ -156,3 +157,114 @@ def test_summary_instances_do_not_share_counters():
     assert not empty.level_counts
     assert not empty.error_messages
     assert empty.skipped_lines == 0
+
+
+README_JSON = (
+    "{\n"
+    '  "levels": {\n'
+    '    "DEBUG": 0,\n'
+    '    "INFO": 1,\n'
+    '    "WARNING": 1,\n'
+    '    "ERROR": 1,\n'
+    '    "CRITICAL": 0\n'
+    "  },\n"
+    '  "top_errors": [\n'
+    "    {\n"
+    '      "count": 1,\n'
+    '      "message": "Disk full"\n'
+    "    }\n"
+    "  ],\n"
+    '  "skipped_lines": 0\n'
+    "}"
+)
+
+
+def test_render_json_readme_example_exact_string_and_key_order():
+    summary = Summary()
+    summary.add(make_record(Level.INFO, "Started"))
+    summary.add(make_record(Level.WARNING, "Slow response"))
+    summary.add(make_record(Level.ERROR, "Disk full"))
+
+    result = summary.render_json()
+
+    assert result == README_JSON
+    data = json.loads(result)
+    assert list(data) == ["levels", "top_errors", "skipped_lines"]
+    assert list(data["levels"]) == [
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    ]
+
+
+def test_render_json_without_records_has_zero_counts_and_empty_errors():
+    summary = Summary()
+    summary.skipped_lines = 3
+
+    result = summary.render_json()
+
+    assert '"top_errors": []' in result
+    data = json.loads(result)
+    assert data["levels"] == {
+        "DEBUG": 0,
+        "INFO": 0,
+        "WARNING": 0,
+        "ERROR": 0,
+        "CRITICAL": 0,
+    }
+    assert data["top_errors"] == []
+    assert data["skipped_lines"] == 3
+
+
+def test_render_json_counts_several_levels():
+    summary = Summary()
+    for level in (Level.DEBUG, Level.DEBUG, Level.ERROR, Level.CRITICAL):
+        summary.add(make_record(level, "boom"))
+
+    data = json.loads(summary.render_json())
+
+    assert data["levels"] == {
+        "DEBUG": 2,
+        "INFO": 0,
+        "WARNING": 0,
+        "ERROR": 1,
+        "CRITICAL": 1,
+    }
+    assert data["top_errors"] == [{"count": 2, "message": "boom"}]
+
+
+def test_render_json_ties_keep_first_occurrence():
+    summary = Summary()
+    for message in ("z", "y", "x"):
+        summary.add(make_record(Level.ERROR, message))
+
+    data = json.loads(summary.render_json())
+
+    assert [e["message"] for e in data["top_errors"]] == ["z", "y", "x"]
+
+
+def test_render_json_keeps_non_ascii_characters():
+    summary = Summary()
+    summary.add(make_record(Level.ERROR, "caf\u00e9 \u2603 down"))
+
+    result = summary.render_json()
+
+    assert "\u00e9" in result
+    assert "\u2603" in result
+    assert "\\u" not in result
+    assert json.loads(result)["top_errors"][0]["message"] == "caf\u00e9 \u2603 down"
+
+
+def test_render_json_lists_only_five_of_eight_distinct_errors():
+    summary = Summary()
+    for index in range(8):
+        summary.add(make_record(Level.ERROR, f"error-{index}"))
+
+    data = json.loads(summary.render_json())
+
+    assert [e["message"] for e in data["top_errors"]] == [
+        f"error-{index}" for index in range(5)
+    ]
+    assert data["levels"]["ERROR"] == 8
