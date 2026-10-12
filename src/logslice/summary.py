@@ -1,5 +1,6 @@
 """Accumulate filtered records without retaining the input lines."""
 
+import json
 from collections import Counter
 from dataclasses import dataclass, field
 
@@ -32,3 +33,15 @@ class Summary:
             lines.append("  (none)")
         lines.append(f"Skipped lines: {self.skipped_lines}")
         return "\n".join(lines)
+
+    def render_json(self) -> str:
+        """Return level counts, up to five error messages, and skipped count as JSON."""
+        payload = {
+            "levels": {level.name: self.level_counts[level] for level in Level},
+            "top_errors": [
+                {"count": count, "message": message}
+                for message, count in self.error_messages.most_common(5)
+            ],
+            "skipped_lines": self.skipped_lines,
+        }
+        return json.dumps(payload, ensure_ascii=False, indent=2)

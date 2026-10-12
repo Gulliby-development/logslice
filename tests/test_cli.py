@@ -1,6 +1,7 @@
 """End-to-end CLI tests using the module entry point and real UTF-8 streams."""
 
 import importlib
+import json
 import os
 import subprocess
 import sys
@@ -48,7 +49,7 @@ def test_help_documents_inputs_options_and_accepted_forms():
         "--since", "--until", "--level", "--summary", "stdin", "'-'",
         "YYYY-MM-DD", "HH:MM:SS", "fraction", "DEBUG", "INFO", "WARNING",
         "WARN", "ERROR", "CRITICAL", "case-insensitive",
-        "--grep", "--ignore-case",
+        "--grep", "--ignore-case", "--summary-format",
     ):
         assert text in result.stdout
 
@@ -317,3 +318,67 @@ def test_ignore_case_alone_does_not_change_output():
     with_flag = run_cli("-i", input_text=README_LOG)
     assert with_flag.returncode == plain.returncode == 0
     assert with_flag.stdout == plain.stdout == README_LOG
+
+
+TEXT_SUMMARY = (
+    "Level counts:\nDEBUG: 0\nINFO: 1\nWARNING: 1\nERROR: 1\nCRITICAL: 0\n"
+    "Top 5 error messages:\n  1  Disk full\nSkipped lines: 0\n"
+)
+
+
+def test_summary_json_with_level_and_grep_filters():
+    result = run_cli(
+        "--summary", "--summary-format", "json",
+        "--level", "warning", "--grep", "Disk", input_text=README_LOG,
+    )
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout.endswith("}\n")
+    assert not result.stdout.endswith("\n\n")
+    assert json.loads(result.stdout) == {
+        "levels": {"DEBUG": 0, "INFO": 0, "WARNING": 0, "ERROR": 1, "CRITICAL": 0},
+        "top_errors": [{"count": 1, "message": "Disk full"}],
+        "skipped_lines": 0,
+    }
+
+
+def test_summary_json_unfiltered_counts_levels():
+    result = run_cli("--summary", "--summary-format", "json", input_text=README_LOG)
+    assert result.returncode == 0
+    data = json.loads(result.stdout)
+    assert list(data) == ["levels", "top_errors", "skipped_lines"]
+    assert data["levels"]["INFO"] == 1
+    assert data["levels"]["WARNING"] == 1
+
+
+@pytest.mark.parametrize("extra", [(), ("--summary-format", "text")])
+def test_summary_text_is_default_and_explicit(extra):
+    result = run_cli("--summary", *extra, input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout == TEXT_SUMMARY
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [(), ("/nonexistent/missing.log",), ("--grep", "[")],
+)
+def test_summary_format_json_requires_summary(extra):
+    result = run_cli("--summary-format", "json", *extra, input_text=README_LOG)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "logslice: --summary-format requires --summary" in result.stderr
+
+
+def test_summary_format_text_without_summary_is_ignored():
+    result = run_cli("--summary-format", "text", input_text=README_LOG)
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert result.stdout == README_LOG
+
+
+def test_summary_format_invalid_choice_is_usage_error():
+    result = run_cli("--summary", "--summary-format", "xml", input_text=README_LOG)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "usage:" in result.stderr
