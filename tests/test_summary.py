@@ -104,6 +104,13 @@ def test_top_five_descending_counts_first_occurrence_ties_and_skipped_count():
     )
 
 
+def test_render_default_matches_explicit_top_five():
+    summary = Summary()
+    summary.add(make_record(Level.ERROR, "failure"))
+
+    assert summary.render() == summary.render(5)
+
+
 def test_error_and_critical_messages_share_counts_but_lower_levels_do_not():
     summary = Summary()
     for level in Level:

@@ -6,7 +6,7 @@ import sys
 from contextlib import nullcontext
 from typing import TextIO
 
-from .filters import matches, parse_datetime, parse_level
+from .filters import matches, parse_datetime, parse_level, parse_top
 from .parser import Level, parse_line
 from .summary import Summary
 
@@ -59,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--summary-format", choices=["text", "json"], default="text",
         help="output format of --summary: text or json (default: text)",
     )
+    parser.add_argument(
+        "--top", type=parse_top, default=None, metavar="N",
+        help="number of ERROR/CRITICAL messages with --summary (1-100; default: 5)",
+    )
     return parser
 
 
@@ -76,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.summary_format == "json" and not args.summary:
         print("logslice: --summary-format requires --summary", file=sys.stderr)
+        return 2
+    if args.top is not None and not args.summary:
+        print("logslice: --top requires --summary", file=sys.stderr)
         return 2
     if args.invert_match and args.grep is None:
         print("logslice: --invert-match requires --grep", file=sys.stderr)
@@ -120,5 +127,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"logslice: cannot read {path!r}: {error}", file=sys.stderr)
             return 2
     if args.summary:
-        print(summary.render_json() if args.summary_format == "json" else summary.render())
+        top = 5 if args.top is None else args.top
+        print(
+            summary.render_json(top)
+            if args.summary_format == "json"
+            else summary.render(top)
+        )
     return 0

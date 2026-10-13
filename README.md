@@ -171,6 +171,33 @@ For the three example log lines above, this prints:
 
 The object has the keys `levels`, `top_errors` and `skipped_lines`.
 
+Top N: add `--top N` to `--summary` to change how many error messages are listed
+(default 5, at most 100).
+
+For example, with this `errors.log`:
+
+```text
+2026-10-10 12:00:00 ERROR Disk full
+2026-10-10 12:00:05 ERROR Timeout
+2026-10-10 12:00:09 ERROR Disk full
+2026-10-10 12:01:00 CRITICAL Out of memory
+```
+
+`logslice errors.log --summary --top 2` prints:
+
+```text
+Level counts:
+DEBUG: 0
+INFO: 0
+WARNING: 0
+ERROR: 3
+CRITICAL: 1
+Top 2 error messages:
+  2  Disk full
+  1  Timeout
+Skipped lines: 0
+```
+
 Input is processed line by line as UTF-8, replacing invalid bytes. LF and CRLF
 line endings are supported; output uses UTF-8. Summary mode keeps per-level and
 per-distinct-error-message counters rather than loading all records into memory.
@@ -191,8 +218,9 @@ have been written when a later file fails.
 | `--grep PATTERN` | Keep only records whose message matches the Python regular expression `PATTERN` (searched in the message only). |
 | `-i`, `--ignore-case` | Make `--grep` case-insensitive. |
 | `-v`, `--invert-match` | With `--grep`, keep only records whose message does not match; an error without `--grep`. |
-| `--summary` | Print level counts, the top 5 ERROR/CRITICAL messages and the skipped line count instead of records. |
-| `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, the top 5 error messages and the skipped line count as a JSON object. |
+| `--summary` | Print level counts, up to the top 5 ERROR/CRITICAL messages by default, and the skipped line count instead of records. |
+| `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, up to the top 5 error messages by default, and the skipped line count as a JSON object. |
+| `--top N` | With `--summary`, list the N most frequent ERROR/CRITICAL messages instead of 5; `N` is 1 to 100. An error without `--summary`. |
 | `-h`, `--help` | Show help. |
 
 ## Development
