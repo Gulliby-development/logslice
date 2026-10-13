@@ -90,6 +90,19 @@ logslice app.log --grep Disk
 
 The pattern is a Python regular expression searched in the message only, not in the timestamp or level.
 
+Drop records by message instead: add `-v` (`--invert-match`) to `--grep` to keep only the records whose message does not match.
+
+```sh
+logslice app.log --grep Disk -v
+```
+
+```text
+2026-10-10 12:00:00 INFO Started
+2026-10-10T12:00:00.123 warn Slow response
+```
+
+`-v` needs `--grep` (otherwise it is an error, exit status `2`) and works with `-i`, the time bounds, `--level` and `--summary`; a record with an empty message is kept unless the pattern matches the empty string.
+
 Read stdin with no file arguments or with `-`. On macOS/Linux:
 
 ```sh
@@ -177,6 +190,7 @@ have been written when a later file fails.
 | `--level LEVEL` | Minimum level: `DEBUG`, `INFO`, `WARNING` (or `WARN`), `ERROR`, `CRITICAL`; case-insensitive (default `DEBUG`). |
 | `--grep PATTERN` | Keep only records whose message matches the Python regular expression `PATTERN` (searched in the message only). |
 | `-i`, `--ignore-case` | Make `--grep` case-insensitive. |
+| `-v`, `--invert-match` | With `--grep`, keep only records whose message does not match; an error without `--grep`. |
 | `--summary` | Print level counts, the top 5 ERROR/CRITICAL messages and the skipped line count instead of records. |
 | `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, the top 5 error messages and the skipped line count as a JSON object. |
 | `-h`, `--help` | Show help. |
