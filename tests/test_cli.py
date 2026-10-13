@@ -49,7 +49,7 @@ def test_help_documents_inputs_options_and_accepted_forms():
         "--since", "--until", "--level", "--summary", "stdin", "'-'",
         "YYYY-MM-DD", "HH:MM:SS", "fraction", "DEBUG", "INFO", "WARNING",
         "WARN", "ERROR", "CRITICAL", "case-insensitive",
-        "--grep", "--ignore-case", "--summary-format",
+        "--grep", "--ignore-case", "--summary-format", "--top",
     ):
         assert text in result.stdout
 

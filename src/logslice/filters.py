@@ -40,6 +40,20 @@ def parse_level(value: str) -> Level:
         ) from None
 
 
+def parse_top(value: str) -> int:
+    """Parse a top-error limit from one to 100."""
+    if re.fullmatch(r"[0-9]{1,3}", value) is None:
+        raise argparse.ArgumentTypeError(
+            f"invalid top count {value!r}: expected an integer from 1 through 100"
+        )
+    count = int(value)
+    if not 1 <= count <= 100:
+        raise argparse.ArgumentTypeError(
+            f"invalid top count {value!r}: expected an integer from 1 through 100"
+        )
+    return count
+
+
 def matches(
     record: Record,
     *,
