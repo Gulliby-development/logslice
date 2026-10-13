@@ -48,6 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="make --grep case-insensitive",
     )
     parser.add_argument(
+        "-v", "--invert-match", action="store_true",
+        help="keep only records whose message does not match --grep",
+    )
+    parser.add_argument(
         "--summary", action="store_true",
         help="print level counts, top 5 ERROR/CRITICAL messages, and skipped lines",
     )
@@ -72,6 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.summary_format == "json" and not args.summary:
         print("logslice: --summary-format requires --summary", file=sys.stderr)
+        return 2
+    if args.invert_match and args.grep is None:
+        print("logslice: --invert-match requires --grep", file=sys.stderr)
         return 2
     pattern = None
     if args.grep is not None:
@@ -102,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
                         until=args.until,
                         level=args.level,
                         pattern=pattern,
+                        invert_match=args.invert_match,
                     ):
                         continue
                     if args.summary:
