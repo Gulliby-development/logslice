@@ -54,6 +54,15 @@ def parse_top(value: str) -> int:
     return count
 
 
+def parse_max_count(value: str) -> int:
+    """Parse a maximum matching-record count from one to 999999999."""
+    if re.fullmatch(r"[1-9][0-9]{0,8}", value) is None:
+        raise argparse.ArgumentTypeError(
+            f"invalid max count {value!r}: expected an integer from 1 through 999999999"
+        )
+    return int(value)
+
+
 def matches(
     record: Record,
     *,
