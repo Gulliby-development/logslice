@@ -198,6 +198,19 @@ Top 2 error messages:
 Skipped lines: 0
 ```
 
+Count: add `--count` (`-c`) to print only the number of matching records, as a decimal number
+and a newline, instead of the records. With the `errors.log` above, `logslice errors.log --count`
+prints:
+
+```text
+4
+```
+
+and `logslice errors.log --level critical --count` prints `1`. `--count` works with the time bounds,
+`--level`, `--grep`, `-i` and `-v`, adds up all input files, and prints `0` when nothing matches.
+It cannot be combined with `--summary` (an error, exit status `2`). When an input file cannot be
+read, no count is printed.
+
 Input is processed line by line as UTF-8, replacing invalid bytes. LF and CRLF
 line endings are supported; output uses UTF-8. Summary mode keeps per-level and
 per-distinct-error-message counters rather than loading all records into memory.
@@ -221,6 +234,7 @@ have been written when a later file fails.
 | `--summary` | Print level counts, up to the top 5 ERROR/CRITICAL messages by default, and the skipped line count instead of records. |
 | `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, up to the top 5 error messages by default, and the skipped line count as a JSON object. |
 | `--top N` | With `--summary`, list the N most frequent ERROR/CRITICAL messages instead of 5; `N` is 1 to 100. An error without `--summary`. |
+| `-c`, `--count` | Print only the number of matching records; an error with `--summary`. |
 | `-h`, `--help` | Show help. |
 
 ## Development
