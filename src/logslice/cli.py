@@ -6,7 +6,7 @@ import sys
 from contextlib import nullcontext
 from typing import TextIO
 
-from .filters import matches, parse_datetime, parse_level, parse_top
+from .filters import matches, parse_datetime, parse_level, parse_max_count, parse_top
 from .parser import Level, parse_line
 from .summary import Summary
 
@@ -54,6 +54,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-c", "--count", action="store_true",
         help="print only the number of matching records",
+    )
+    parser.add_argument(
+        "-m", "--max-count", type=parse_max_count, metavar="N",
+        help="stop after the first N matching records (1-999999999)",
     )
     parser.add_argument(
         "--summary", action="store_true",
@@ -135,6 +139,10 @@ def main(argv: list[str] | None = None) -> int:
                         summary.add(record)
                     elif not args.count:
                         print(record.raw)
+                    if args.max_count is not None and matched >= args.max_count:
+                        break
+            if args.max_count is not None and matched >= args.max_count:
+                break
         except OSError as error:
             print(f"logslice: cannot read {path!r}: {error}", file=sys.stderr)
             return 2

@@ -50,6 +50,7 @@ def test_help_documents_inputs_options_and_accepted_forms():
         "YYYY-MM-DD", "HH:MM:SS", "fraction", "DEBUG", "INFO", "WARNING",
         "WARN", "ERROR", "CRITICAL", "case-insensitive",
         "--grep", "--ignore-case", "--summary-format", "--top", "-c", "--count",
+        "-m", "--max-count",
     ):
         assert text in result.stdout
 
