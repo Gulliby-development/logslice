@@ -52,6 +52,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="keep only records whose message does not match --grep",
     )
     parser.add_argument(
+        "-c", "--count", action="store_true",
+        help="print only the number of matching records",
+    )
+    parser.add_argument(
         "--summary", action="store_true",
         help="print level counts, top 5 ERROR/CRITICAL messages, and skipped lines",
     )
@@ -66,11 +70,14 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _configure_utf8(stream: TextIO) -> None:
+def _configure_utf8(stream: TextIO, *, newline: str | None = None) -> None:
     """Configure real standard streams, leaving in-memory test streams alone."""
     reconfigure = getattr(stream, "reconfigure", None)
     if reconfigure is not None:
-        reconfigure(encoding="utf-8", errors="replace")
+        if newline is None:
+            reconfigure(encoding="utf-8", errors="replace")
+        else:
+            reconfigure(encoding="utf-8", errors="replace", newline=newline)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -87,6 +94,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.invert_match and args.grep is None:
         print("logslice: --invert-match requires --grep", file=sys.stderr)
         return 2
+    if args.count and args.summary:
+        print("logslice: --count conflicts with --summary", file=sys.stderr)
+        return 2
     pattern = None
     if args.grep is not None:
         try:
@@ -98,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
     summary = Summary()
+    matched = 0
     for path in args.files or ["-"]:
         try:
             with (
@@ -119,13 +130,17 @@ def main(argv: list[str] | None = None) -> int:
                         invert_match=args.invert_match,
                     ):
                         continue
+                    matched += 1
                     if args.summary:
                         summary.add(record)
-                    else:
+                    elif not args.count:
                         print(record.raw)
         except OSError as error:
             print(f"logslice: cannot read {path!r}: {error}", file=sys.stderr)
             return 2
+    if args.count:
+        _configure_utf8(sys.stdout, newline="\n")
+        print(matched)
     if args.summary:
         top = 5 if args.top is None else args.top
         print(
