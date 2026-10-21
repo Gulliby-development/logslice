@@ -59,6 +59,8 @@ Messages may be empty. Timestamps are timezone-naive: `Z` and UTC offsets are no
 supported. Invalid lines, including blank lines and stack-trace continuations,
 are skipped.
 
+The fractional seconds may follow a dot or a comma, so the default output of Python's `logging` module (`2026-10-10 12:00:00,123 ERROR Disk full`) is read too. A matching line is printed exactly as it was written, comma included. The `--since` and `--until` values still use a dot.
+
 Read one or more files in argument order:
 
 ```sh

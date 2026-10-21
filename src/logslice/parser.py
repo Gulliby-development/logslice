@@ -29,7 +29,7 @@ class Record:
 
 _LINE_RE = re.compile(
     r"(?P<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}[ T]"
-    r"[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?)"
+    r"[0-9]{2}:[0-9]{2}:[0-9]{2}(?:[.,][0-9]+)?)"
     r"[ \t]+(?P<level>[A-Za-z]+)(?:[ \t]+(?P<message>.*))?"
 )
 
@@ -37,7 +37,7 @@ _LINE_RE = re.compile(
 def parse_line(line: str) -> Record | None:
     """Return a record, or None for invalid dates, levels, or line formats.
 
-    Accept space or T timestamp separators and optional fractional seconds.
+    Accept space or T timestamp separators and optional fractional seconds after a dot or comma.
     Levels are case-insensitive. Timezone suffixes are not accepted.
     """
     raw = line.rstrip("\r\n")
@@ -45,7 +45,7 @@ def parse_line(line: str) -> Record | None:
     if match is None:
         return None
     try:
-        timestamp = datetime.fromisoformat(match["timestamp"])
+        timestamp = datetime.fromisoformat(match["timestamp"].replace(",", "."))
         level = Level[match["level"].upper()]
     except (ValueError, KeyError):
         return None
