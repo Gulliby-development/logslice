@@ -6,7 +6,14 @@ import sys
 from contextlib import nullcontext
 from typing import TextIO
 
-from .filters import matches, parse_datetime, parse_level, parse_max_count, parse_top
+from .filters import (
+    matches,
+    parse_datetime,
+    parse_level,
+    parse_max_count,
+    parse_offset,
+    parse_top,
+)
 from .parser import Level, parse_line
 from .summary import Summary
 
@@ -60,7 +67,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="stop after the first N matching records (1-999999999)",
     )
     parser.add_argument(
-        "--summary", action="store_true",
+        "--offset",
+        type=parse_offset,
+        default=0,
+        metavar="N",
+        help="skip the first N matching records (0-999999999; default: 0)",
+    )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
         help="print level counts, top 5 ERROR/CRITICAL messages, and skipped lines",
     )
     parser.add_argument(
@@ -112,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
     summary = Summary()
+    seen = 0
     matched = 0
     for path in args.files or ["-"]:
         try:
@@ -133,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
                         pattern=pattern,
                         invert_match=args.invert_match,
                     ):
+                        continue
+                    seen += 1
+                    if seen <= args.offset:
                         continue
                     matched += 1
                     if args.summary:

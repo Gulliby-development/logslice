@@ -228,6 +228,20 @@ file is not reported. With `--count` the number printed is at most N; with `--su
 those N records are summarized and `Skipped lines` counts only the lines read until then.
 A repeated option takes the last value. An invalid value is an error, exit status `2`.
 
+Offset: add `--offset N` to skip the first N matching records before anything is printed, counted or
+summarized. `N` is a whole number from 0 to 999999999 (default 0). With the `errors.log` above,
+`logslice errors.log --offset 3` prints:
+
+```text
+2026-10-10 12:01:00 CRITICAL Out of memory
+```
+
+Records are counted after all filters and across the files in argument order, so the skipped records may
+come from more than one file. `--offset` works with `--count`, `--summary` and `--max-count`: the
+`--max-count` limit counts the records after the skipped ones, so `--offset 1 --max-count 2` prints the second and
+the third matching record. When fewer than N records match, nothing is printed and `--count` prints `0`.
+An invalid value is an error, exit status `2`.
+
 Input is processed line by line as UTF-8, replacing invalid bytes. LF and CRLF
 line endings are supported; output uses UTF-8. Summary mode keeps per-level and
 per-distinct-error-message counters rather than loading all records into memory.
@@ -249,6 +263,7 @@ have been written when a later file fails.
 | `-i`, `--ignore-case` | Make `--grep` case-insensitive. |
 | `-v`, `--invert-match` | With `--grep`, keep only records whose message does not match; an error without `--grep`. |
 | `-m N`, `--max-count N` | Stop after the first `N` matching records, `N` from 1 to 999999999; with `--count` or `--summary` only those records count. |
+| `--offset N` | Skip the first `N` matching records, `N` from 0 to 999999999 (default 0); with `--max-count` the limit counts after the skipped records. |
 | `--summary` | Print level counts, up to the top 5 ERROR/CRITICAL messages by default, and the skipped line count instead of records. |
 | `--summary-format {text,json}` | Output format of `--summary`, default `text`; `json` prints the level counts, up to the top 5 error messages by default, and the skipped line count as a JSON object. |
 | `--top N` | With `--summary`, list the N most frequent ERROR/CRITICAL messages instead of 5; `N` is 1 to 100. An error without `--summary`. |
