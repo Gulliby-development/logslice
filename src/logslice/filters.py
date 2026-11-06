@@ -63,6 +63,15 @@ def parse_max_count(value: str) -> int:
     return int(value)
 
 
+def parse_offset(value: str) -> int:
+    """Parse a number of matching records to skip, from zero to 999999999."""
+    if re.fullmatch(r"0|[1-9][0-9]{0,8}", value) is None:
+        raise argparse.ArgumentTypeError(
+            f"invalid offset {value!r}: expected an integer from 0 through 999999999"
+        )
+    return int(value)
+
+
 def matches(
     record: Record,
     *,
